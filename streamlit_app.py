@@ -7,6 +7,13 @@ from datetime import datetime
 from pathlib import Path
 import whisper
 
+# 세션 상태 초기화
+if "extracted" not in st.session_state:
+    st.session_state.extracted = False
+    st.session_state.video_path = ""
+    st.session_state.audio_path = ""
+    st.session_state.subtitle_path = ""
+
 # 영상 다운로드 함수
 def download_video(url, output_dir, resolution='best'):
     ytdlp_cmd = [
@@ -51,6 +58,7 @@ st.write("유튜브 또는 틱톡 영상 URL을 입력하면, 자동으로 영�
 
 url = st.text_input("🎞 영상 URL 입력")
 resolution = st.selectbox("📐 해상도 선택", ["best", "720p", "360p"])
+whisper_enabled = st.checkbox("📝 자막 생성 (Whisper 사용)", value=True)
 whisper_model = st.selectbox("🧠 Whisper 모델 선택", ["tiny", "base", "small", "medium", "large"])
 
 if st.button("▶ 자동 추출 시작"):
@@ -69,22 +77,31 @@ if st.button("▶ 자동 추출 시작"):
             try:
                 download_video(url, folder_name, resolution)
                 extract_audio(video_path, audio_path)
-                generate_subtitles(audio_path, subtitle_path, model_size=whisper_model)
+
+                if whisper_enabled:
+                    generate_subtitles(audio_path, subtitle_path, model_size=whisper_model)
+
+                st.session_state.extracted = True
+                st.session_state.video_path = video_path
+                st.session_state.audio_path = audio_path
+                st.session_state.subtitle_path = subtitle_path
 
                 st.success("✅ 처리 완료!")
 
-                if os.path.exists(video_path):
-                    st.video(video_path)
-                    with open(video_path, 'rb') as f:
-                        st.download_button("📥 영상 다운로드", f, file_name="video.mp4")
-
-                if os.path.exists(audio_path):
-                    with open(audio_path, 'rb') as f:
-                        st.download_button("🎧 오디오 다운로드", f, file_name="audio.mp3")
-
-                if os.path.exists(subtitle_path):
-                    with open(subtitle_path, 'rb') as f:
-                        st.download_button("📝 자막 다운로드 (.srt)", f, file_name="subtitle.srt")
-
             except Exception as e:
                 st.error(f"에러 발생: {str(e)}")
+
+# 추출이 완료된 경우 다운로드 버튼 표시
+if st.session_state.extracted:
+    if os.path.exists(st.session_state.video_path):
+        st.video(st.session_state.video_path)
+        with open(st.session_state.video_path, 'rb') as f:
+            st.download_button("📥 영상 다운로드", f, file_name="video.mp4")
+
+    if os.path.exists(st.session_state.audio_path):
+        with open(st.session_state.audio_path, 'rb') as f:
+            st.download_button("🎧 오디오 다운로드", f, file_name="audio.mp3")
+
+    if whisper_enabled and os.path.exists(st.session_state.subtitle_path):
+        with open(st.session_state.subtitle_path, 'rb') as f:
+            st.download_button("📝 자막 다운로드 (.srt)", f, file_name="subtitle.srt")
