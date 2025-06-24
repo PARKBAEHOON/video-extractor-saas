@@ -18,7 +18,7 @@ if "extracted" not in st.session_state:
 def download_video(url, output_dir, resolution='best'):
     ytdlp_cmd = [
         "yt-dlp",
-        "-f", resolution,
+        "-f", "bv*+ba/best",
         "--write-auto-sub",
         "--sub-lang", "ko,en",
         "--convert-subs", "srt",
