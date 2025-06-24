@@ -1,35 +1,27 @@
-# streamlit_app.py - SaaS용 영상 자동 추출 앱
+# streamlit_app.py - SaaS용 영상 자동 추출 앱 (서버 호환 버전)
 
 import streamlit as st
 import os
-import subprocess
 from datetime import datetime
 from pathlib import Path
 import whisper
+from yt_dlp import YoutubeDL
 
-# 영상 다운로드 함수
+# 영상 다운로드 함수 (yt_dlp API 사용)
 def download_video(url, output_dir, resolution='best'):
-    ytdlp_cmd = [
-        "yt-dlp",
-        "-f", resolution,
-        "--write-auto-sub",
-        "--sub-lang", "ko,en",
-        "--convert-subs", "srt",
-        "--merge-output-format", "mp4",
-        "-o", f"{output_dir}/video.%(ext)s",
-        url
-    ]
-    subprocess.run(ytdlp_cmd, check=True)
-
-# 오디오 추출
-def extract_audio(video_path, audio_path):
-    cmd = ["ffmpeg", "-y", "-i", video_path, "-vn", "-acodec", "mp3", audio_path]
-    subprocess.run(cmd, check=True)
+    ydl_opts = {
+        'format': resolution,
+        'outtmpl': f'{output_dir}/video.%(ext)s',
+        'merge_output_format': 'mp4',
+        'quiet': True
+    }
+    with YoutubeDL(ydl_opts) as ydl:
+        ydl.download([url])
 
 # 자막 생성 (Whisper)
-def generate_subtitles(audio_path, subtitle_path, model_size='base'):
+def generate_subtitles(video_path, subtitle_path, model_size='base'):
     model = whisper.load_model(model_size)
-    result = model.transcribe(audio_path)
+    result = model.transcribe(video_path)
     with open(subtitle_path, 'w', encoding='utf-8') as f:
         for segment in result["segments"]:
             start = segment['start']
@@ -46,8 +38,8 @@ def format_time(seconds):
     return f"{h:02}:{m:02}:{s:02},{ms:03}"
 
 # Streamlit UI 구성
-st.title("📽️ 영상 추출 + Whisper 자막 생성기")
-st.write("유튜브 또는 틱톡 영상 URL을 입력하면, 자동으로 영상/오디오/자막을 추출합니다.")
+st.title("📽️ 영상 + Whisper 자막 생성기")
+st.write("유튜브 또는 틱톡 영상 URL을 입력하면 자동으로 영상과 자막을 생성합니다.")
 
 url = st.text_input("🎞 영상 URL 입력")
 resolution = st.selectbox("📐 해상도 선택", ["best", "720p", "360p"])
@@ -63,13 +55,11 @@ if st.button("▶ 자동 추출 시작"):
             Path(folder_name).mkdir(parents=True, exist_ok=True)
 
             video_path = os.path.join(folder_name, 'video.mp4')
-            audio_path = os.path.join(folder_name, 'audio.mp3')
             subtitle_path = os.path.join(folder_name, 'subtitle.srt')
 
             try:
                 download_video(url, folder_name, resolution)
-                extract_audio(video_path, audio_path)
-                generate_subtitles(audio_path, subtitle_path, model_size=whisper_model)
+                generate_subtitles(video_path, subtitle_path, model_size=whisper_model)
 
                 st.success("✅ 처리 완료!")
 
@@ -77,10 +67,6 @@ if st.button("▶ 자동 추출 시작"):
                     st.video(video_path)
                     with open(video_path, 'rb') as f:
                         st.download_button("📥 영상 다운로드", f, file_name="video.mp4")
-
-                if os.path.exists(audio_path):
-                    with open(audio_path, 'rb') as f:
-                        st.download_button("🎧 오디오 다운로드", f, file_name="audio.mp3")
 
                 if os.path.exists(subtitle_path):
                     with open(subtitle_path, 'rb') as f:
