@@ -61,6 +61,11 @@ resolution = st.selectbox("📐 해상도 선택", ["best", "720p", "360p"])
 whisper_enabled = st.checkbox("📝 자막 생성 (Whisper 사용)", value=True)
 whisper_model = st.selectbox("🧠 Whisper 모델 선택", ["tiny", "base", "small", "medium", "large"])
 
+# Shorts 링크 자동 처리
+if url and "youtube.com/shorts/" in url:
+    video_id = url.split("shorts/")[1].split("?")[0]
+    url = f"https://www.youtube.com/watch?v={video_id}"
+
 if st.button("▶ 자동 추출 시작"):
     if not url:
         st.error("URL을 입력해주세요!")
