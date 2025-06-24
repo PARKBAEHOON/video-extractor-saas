@@ -72,9 +72,19 @@ if st.button("▶ 자동 추출 시작"):
                 generate_subtitles(audio_path, subtitle_path, model_size=whisper_model)
 
                 st.success("✅ 처리 완료!")
-                st.video(video_path)
-                st.download_button("📥 영상 다운로드", open(video_path, 'rb'), file_name="video.mp4")
-                st.download_button("🎧 오디오 다운로드", open(audio_path, 'rb'), file_name="audio.mp3")
-                st.download_button("📝 자막 다운로드 (.srt)", open(subtitle_path, 'rb'), file_name="subtitle.srt")
+
+                if os.path.exists(video_path):
+                    st.video(video_path)
+                    with open(video_path, 'rb') as f:
+                        st.download_button("📥 영상 다운로드", f, file_name="video.mp4")
+
+                if os.path.exists(audio_path):
+                    with open(audio_path, 'rb') as f:
+                        st.download_button("🎧 오디오 다운로드", f, file_name="audio.mp3")
+
+                if os.path.exists(subtitle_path):
+                    with open(subtitle_path, 'rb') as f:
+                        st.download_button("📝 자막 다운로드 (.srt)", f, file_name="subtitle.srt")
+
             except Exception as e:
                 st.error(f"에러 발생: {str(e)}")
